@@ -32,6 +32,10 @@
 #include <NTPClient.h>
 #include <TimeLib.h>
 
+// Settings and Webserver
+#include <ESP8266WebServer.h>
+#include "ESP8266SettingsManager.h"
+
 
 ///////////////////////////////////////////////////////////////////////
 // HARDWARE SPECIFIC ADAPTIONS 
@@ -104,6 +108,10 @@ const int maxNtpRetries = 5;
 unsigned long epochTime = 0;
 bool ntpTimeAvailable = false;
 
+// Settings and Websever
+ESP8266WebServer server(80);
+ESP8266SettingsManager settingsManager(server);
+
 
 
 ////////////////////////////////////////////////////////////////////
@@ -151,13 +159,16 @@ void setup() {
         delay(5000);
     }
 
+  // Debugging Erase EEPROM
+  //settingsManager.eraseAndInitializeEEPROM();
+
 }
 
 
 ////////////////////////////////////////////////////////////////////
 // MAIN LOOP
 
-void loop() {
+void loop() {   
     // INVERTER NETWORK 
     wifi_connect(WIFI_INVERTER_SSID, WIFI_INVERTER_KEY, "Inverter Network");
     // If connected with the Solar Inverter
@@ -190,6 +201,9 @@ void loop() {
     // Switching to Home Network
     wifi_connect(WIFI_HOME_SSID, WIFI_HOME_KEY, "Home Network");
     if (connected) {
+        // Start Websever and SettingsManager  
+        settingsManager.begin();
+        
         mqtt_submit_data();
         delay(3000); // Show data for 3 Seconds
         ntpTimeAvailable = syncTime();
@@ -205,7 +219,9 @@ void loop() {
           delay(5000);
           secondsInHomeNetwork+=5;
         }
+        settingsManager.stop();
     }
+
 }
 
 
@@ -411,7 +427,7 @@ void displayInverterStatus(const Inverter& inverter) {
 }
 
 void displayTime() {
-  int col1 = 70;
+  int col1 = 60;
   int col2 = 100;
 
   tmElements_t tm;
@@ -432,7 +448,7 @@ void displayTime() {
 
   display.print("Date ");
   display.setCursor(col1,8);
-  display.print(String((tm.Year + 1970) % 100) +"."+ String(tm.Month) +"."+ String(tm.Day) );
+  display.print(String(tm.Day) +"."+ String(tm.Month) + ".20" + String((tm.Year + 1970) % 100)  );
   display.setCursor(col2,8);
   display.println("");
 
